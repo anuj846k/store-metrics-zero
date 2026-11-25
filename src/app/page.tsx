@@ -16,7 +16,7 @@ export default function Chat() {
 
   return (
     <main className={styles.main}>
-      {messages.map((message) => (
+      {messages.map((message, index) => (
         <div key={message.id} className={styles.message}>
           <strong>{message.role === "user" ? "You" : "Store"}: </strong>
           {message.parts.map((part, i) => {
@@ -25,7 +25,12 @@ export default function Chat() {
               return (
                 <div key={i}>
                   <ToolCall part={part} />
-                  {part.type !== "dynamic-tool" && <MetricChart part={part} />}
+                  {part.type !== "dynamic-tool" && (
+                    <MetricChart
+                      part={part}
+                      loading={index === messages.length - 1 && (status === "submitted" || status === "streaming")}
+                    />
+                  )}
                 </div>
               );
             }
