@@ -1,13 +1,17 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
+import { isToolUIPart } from "ai";
 import { useState } from "react";
 
+import type { ChatMessage } from "@/lib/chat/tools";
+
 import styles from "./page.module.css";
+import { ToolCall } from "./tool-call";
 
 export default function Chat() {
   const [input, setInput] = useState("");
-  const { messages, sendMessage, status, error } = useChat();
+  const { messages, sendMessage, status, error } = useChat<ChatMessage>();
 
   return (
     <main className={styles.main}>
@@ -16,13 +20,7 @@ export default function Chat() {
           <strong>{message.role === "user" ? "You" : "Store"}: </strong>
           {message.parts.map((part, i) => {
             if (part.type === "text") return <span key={i}>{part.text}</span>;
-            if (part.type.startsWith("tool-")) {
-              return (
-                <div key={i} className={styles.tool}>
-                  {part.type.slice("tool-".length)}
-                </div>
-              );
-            }
+            if (isToolUIPart(part)) return <ToolCall key={i} part={part} />;
             return null;
           })}
         </div>

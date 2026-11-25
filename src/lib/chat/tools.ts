@@ -1,5 +1,5 @@
 /** Metric tools for the chat. Metric definitions: docs/metrics.md. */
-import { tool, type ToolSet } from "ai";
+import { tool, type InferUITools, type ToolSet, type UIDataTypes, type UIMessage } from "ai";
 import { z } from "zod";
 
 import { repeatCustomersByChannel } from "@/lib/metrics/customers";
@@ -77,3 +77,7 @@ export const tools = {
     execute: async ({ range }) => inRange(range, ({ start, end }) => repeatCustomersByChannel(start, end)),
   }),
 } satisfies ToolSet;
+
+/** Input and output types of each tool, for the UI. */
+export type ChatTools = InferUITools<typeof tools>;
+export type ChatMessage = UIMessage<never, UIDataTypes, ChatTools>;

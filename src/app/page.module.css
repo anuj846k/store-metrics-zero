@@ -15,9 +15,21 @@
 }
 
 .tool {
+  margin: 8px 0;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
   font-family: var(--font-geist-mono);
   font-size: 0.85em;
-  opacity: 0.6;
+}
+
+.tool summary {
+  cursor: pointer;
+}
+
+.tool pre {
+  margin: 8px 0 0;
+  overflow-x: auto;
 }
 
 .error {
