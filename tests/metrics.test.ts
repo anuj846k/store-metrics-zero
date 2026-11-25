@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { repeatCustomersByChannel } from "@/lib/metrics/customers";
 import { ordersPath } from "@/lib/metrics/orders";
-import { returnsByProduct, topProductsByRevenue } from "@/lib/metrics/products";
+import { returnedLines, returnsByProduct, topProductsByRevenue } from "@/lib/metrics/products";
 import { averageOrderValue, ordersByDay, salesByDay } from "@/lib/metrics/sales";
 
 const ALL = ["2025-05-06", "2025-10-27"] as const;
@@ -50,6 +50,39 @@ describe("returnsByProduct", () => {
       ["Cable Knit Cardigan", 0, 0],
       ["Harbor Rain Shell", 0, 0],
     ]);
+  });
+});
+
+describe("returnedLines", () => {
+  it("gives each returned line, by product title, then newest return first", () => {
+    const rows = returnedLines(...ALL).map((l) => [l.productTitle, l.variant, l.returnDate, l.returnReason, l.refund]);
+    expect(rows).toEqual([
+      ["Alpine Down Parka", "S / Black", "2025-10-26", "Defective", 219],
+      ["Alpine Down Parka", "L / Navy", "2025-10-24", "Too large", 219],
+      ["Alpine Down Parka", "M / Black", "2025-10-21", "Too small", 219],
+      ["Harbor Rain Shell", "M / Navy", "2025-07-08", "Not as pictured", 94],
+      ["Northridge Insulated Jacket", "S / Olive", "2025-10-23", "Too small", 135.15],
+      ["Northridge Insulated Jacket", "L / Black", "2025-10-06", "Changed mind", 128.79],
+      ["Organic Cotton Tee", "S / Olive", "2025-09-11", "Too large", 28],
+      ["Utility Chino", "L / Black", "2025-10-27", "Changed mind", 74],
+    ]);
+  });
+
+  it("adds up to the returned units of returnsByProduct", () => {
+    const units = (start: string, end: string) => returnedLines(start, end).reduce((total, l) => total + l.quantity, 0);
+    const returned = (start: string, end: string) => returnsByProduct(start, end).reduce((total, p) => total + p.returnedUnits, 0);
+    expect(units(...ALL)).toBe(returned(...ALL));
+    expect(units("2025-10-01", "2025-10-15")).toBe(returned("2025-10-01", "2025-10-15"));
+  });
+
+  it("uses the order date for the range, not the return date", () => {
+    expect(returnedLines("2025-10-20", "2025-10-26").map((l) => [l.orderId, l.orderDate, l.returnDate])).toEqual([
+      ["#3102", "2025-10-26", "2025-10-27"],
+    ]);
+  });
+
+  it("gives an empty list for a range with no orders", () => {
+    expect(returnedLines(...EMPTY)).toEqual([]);
   });
 });
 

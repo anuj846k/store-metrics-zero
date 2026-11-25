@@ -5,16 +5,19 @@ import path from "node:path";
 /** Money values are integer cents, so sums have no floating-point error. */
 export type Line = {
   orderId: string;
+  lineItemId: string;
   orderDate: string;
   customerId: string;
   isRepeatCustomer: boolean;
   salesChannel: string;
   productId: string;
   productTitle: string;
+  variant: string;
   quantity: number;
   lineTotalCents: number;
   fulfillmentStatus: string;
   returned: boolean;
+  returnDate: string;
   returnReason: string;
   refundCents: number;
 };
@@ -74,16 +77,19 @@ function toCents(value: string): number {
 function parse(row: Record<string, string>): Line {
   return {
     orderId: row.order_id,
+    lineItemId: row.line_item_id,
     orderDate: row.order_date,
     customerId: row.customer_id,
     isRepeatCustomer: row.is_repeat_customer === "true",
     salesChannel: row.sales_channel,
     productId: row.product_id,
     productTitle: row.product_title,
+    variant: row.variant,
     quantity: Number(row.quantity),
     lineTotalCents: toCents(row.line_total),
     fulfillmentStatus: row.fulfillment_status,
     returned: row.returned === "true",
+    returnDate: row.return_date,
     returnReason: row.return_reason,
     refundCents: toCents(row.refund_amount),
   };
