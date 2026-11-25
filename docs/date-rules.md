@@ -3,6 +3,12 @@
 This file tells how to change a date phrase from the store owner into an exact date range.
 Each metric function takes this range as `start` and `end`.
 
+## Fixed today for this dataset
+
+`data/order-history.csv` ends on 2025-10-27. For this dataset, "today" is fixed at Tuesday, 2025-10-28.
+Thus "last week" is 2025-10-20 to 2025-10-26, and "this month" is 2025-10-01 to 2025-10-28.
+The example table below uses a different today (2026-11-25) to show each rule.
+
 ## General rules
 
 1. A range includes the start date and the end date.
