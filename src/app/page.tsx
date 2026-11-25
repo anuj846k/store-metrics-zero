@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import type { ChatMessage } from "@/lib/chat/tools";
 
+import { MetricChart } from "./metric-chart";
 import styles from "./page.module.css";
 import { ToolCall } from "./tool-call";
 
@@ -20,7 +21,14 @@ export default function Chat() {
           <strong>{message.role === "user" ? "You" : "Store"}: </strong>
           {message.parts.map((part, i) => {
             if (part.type === "text") return <span key={i}>{part.text}</span>;
-            if (isToolUIPart(part)) return <ToolCall key={i} part={part} />;
+            if (isToolUIPart(part)) {
+              return (
+                <div key={i}>
+                  <ToolCall part={part} />
+                  {part.type !== "dynamic-tool" && <MetricChart part={part} />}
+                </div>
+              );
+            }
             return null;
           })}
         </div>

@@ -10,6 +10,19 @@ export type ProductReturns = {
   reasons: Record<string, number>;
 };
 
+export type ReturnedLine = {
+  orderId: string;
+  lineItemId: string;
+  productId: string;
+  productTitle: string;
+  variant: string;
+  quantity: number;
+  orderDate: string;
+  returnDate: string;
+  returnReason: string;
+  refund: number;
+};
+
 export type ProductRevenue = {
   productId: string;
   productTitle: string;
@@ -40,6 +53,29 @@ export function returnsByProduct(start: string, end: string): ProductReturns[] {
       };
     })
     .sort((a, b) => b.returnRate - a.returnRate || b.returnedUnits - a.returnedUnits || a.productTitle.localeCompare(b.productTitle));
+}
+
+/**
+ * Each returned order line, for the reorder decision by variant. The range uses the order date,
+ * as returnsByProduct does, so the quantities add up to its returnedUnits.
+ * Sorted by product title, then the newest return first.
+ */
+export function returnedLines(start: string, end: string): ReturnedLine[] {
+  return load(start, end)
+    .filter((line) => line.returned)
+    .map((line) => ({
+      orderId: line.orderId,
+      lineItemId: line.lineItemId,
+      productId: line.productId,
+      productTitle: line.productTitle,
+      variant: line.variant,
+      quantity: line.quantity,
+      orderDate: line.orderDate,
+      returnDate: line.returnDate,
+      returnReason: line.returnReason,
+      refund: money(line.refundCents),
+    }))
+    .sort((a, b) => a.productTitle.localeCompare(b.productTitle) || b.returnDate.localeCompare(a.returnDate));
 }
 
 /** Revenue is net sales: after discounts, before refunds. */

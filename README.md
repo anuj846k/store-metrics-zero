@@ -30,6 +30,7 @@ A date that is not valid, or a start after the end, gives an error. A range with
 | Metric | Function | Merchant decision |
 |---|---|---|
 | returns_by_product | `returnsByProduct` | Reorder: do not reorder a product that comes back. Fix the size chart when the reason is size. Rate = returned ÷ fulfilled units. |
+| returned_lines | `returnedLines` | Reorder by variant: see which size or color comes back, and why. The range is the order date, so the lines add up to `returnsByProduct`. |
 | sales_by_day | `salesByDay` | Find the strong and weak days, to time promotions and plan cash. |
 | orders_by_day | `ordersByDay` | Plan packing and shipping staff for busy days. |
 | average_order_value | `averageOrderValue` | Set the free-shipping threshold and bundle prices. |
@@ -65,9 +66,24 @@ How a question goes to a tool:
 
 1. The model selects the tool from its description. "Came back" goes to `returnsByProduct` when the subject is a product, and to `repeatCustomersByChannel` when the subject is a customer.
 2. The model gives the date phrase as `range.period` (`lastWeek`, `lastNDays` + `days`, `month` + `month`, `between` + `start`/`end`). It does not calculate dates. The code calculates them, because a model makes errors with weekdays and month ends.
-3. Some tools take more inputs: `returnsByProduct` takes `productTitle` ("jacket"), and `topProductsByRevenue` takes `limit` ("top 10").
+3. Some tools take more inputs: `returnsByProduct` and `returnedLines` take `productTitle` ("jacket"), and `topProductsByRevenue` takes `limit` ("top 10").
 4. Each tool result has `start`, `end`, `hasOrders` and `result`. The answer gives the exact dates. When `hasOrders` is false, it says "There are no orders from <start> to <end>".
 5. The data has no ad spend, ROAS or category. The model says this and does not use the nearest tool.
+
+### Charts
+
+The chat shows one chart (or table) below each tool result (`src/app/metric-chart.tsx`, Recharts). When `hasOrders` is false, it shows no chart.
+While the tool runs, a gray skeleton of the same chart type shows in its place (`src/app/chart-skeleton.tsx`), at the same height, so the page does not move.
+
+| Metric | Chart | Why this chart |
+|---|---|---|
+| returned_lines | Table | The owner reads each line (variant, return date, reason) to decide the reorder. A chart cannot show text values. |
+| sales_by_day | Line | Sales is a trend over time. A line shows the rise and fall from day to day. |
+| orders_by_day | Bar (vertical) | An order count is a whole number for each day. A bar shows the busy days clearly. |
+| average_order_value | One number, no chart | The result is one value. A chart of one value gives no more information. |
+| top_products_by_revenue | Bar (horizontal) | It is a ranked list. Long product titles are easy to read on the vertical axis. |
+| returns_by_product | Bar (horizontal), return rate % | It compares products. Highest rate is first, so the product to stop reordering is at the top. |
+| repeat_customers_by_channel | Stacked bar | Each channel bar is all its orders, split into repeat and new. You see the size and the share together. |
 
 Errors: in dev the stream shows the cause (for example, a rate limit). In prod it shows "The answer failed. Try again."
 

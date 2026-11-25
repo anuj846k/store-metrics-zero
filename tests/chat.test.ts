@@ -64,6 +64,14 @@ describe("tools", () => {
     expect(output.result.map((p) => [p.productTitle, p.returnedUnits])).toEqual([["Utility Chino", 1]]);
   });
 
+  it("returnedLines filters by title", async () => {
+    const output = await run(tools.returnedLines, {
+      range: { period: "between", start: "2025-05-06", end: "2025-10-27" },
+      productTitle: "parka",
+    });
+    expect(output.result.map((l) => l.variant)).toEqual(["S / Black", "L / Navy", "M / Black"]);
+  });
+
   it("topProductsByRevenue passes the limit", async () => {
     const output = await run(tools.topProductsByRevenue, {
       range: { period: "between", start: "2025-10-01", end: "2025-10-15" },

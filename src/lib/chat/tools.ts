@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { repeatCustomersByChannel } from "@/lib/metrics/customers";
 import { load } from "@/lib/metrics/orders";
-import { returnsByProduct, topProductsByRevenue } from "@/lib/metrics/products";
+import { returnedLines, returnsByProduct, topProductsByRevenue } from "@/lib/metrics/products";
 import { averageOrderValue, ordersByDay, salesByDay } from "@/lib/metrics/sales";
 
 import { rangeSchema, resolveRange, storeToday, type Range } from "./dates";
@@ -15,6 +15,16 @@ function inRange<T>(input: z.infer<typeof rangeSchema>, metric: (range: Range) =
   return { ...range, hasOrders: load(range.start, range.end).length > 0, result: metric(range) };
 }
 
+const productTitleSchema = z
+  .string()
+  .optional()
+  .describe('A word in the product title, for example "jacket" or "parka".');
+
+/** Keep the rows with the word in the product title. No word keeps all rows. */
+function withTitle<T extends { productTitle: string }>(rows: T[], productTitle?: string): T[] {
+  return rows.filter((row) => !productTitle || row.productTitle.toLowerCase().includes(productTitle.toLowerCase()));
+}
+
 export const tools = {
   returnsByProduct: tool({
     description:
@@ -22,16 +32,20 @@ export const tools = {
       'and the count of each return reason. Owners ask: "returns", "returnd", "came back", "got returned", ' +
       '"coming back the most", "is it a sizing thing", "which jackets/coats/parkas/sneakers were returned". ' +
       "Use it when the subject is a product. There is no category field: for jackets or coats, filter by product title.",
-    inputSchema: z.object({
-      range: rangeSchema,
-      productTitle: z.string().optional().describe('A word in the product title, for example "jacket" or "parka".'),
-    }),
+    inputSchema: z.object({ range: rangeSchema, productTitle: productTitleSchema }),
     execute: async ({ range, productTitle }) =>
-      inRange(range, ({ start, end }) =>
-        returnsByProduct(start, end).filter(
-          (product) => !productTitle || product.productTitle.toLowerCase().includes(productTitle.toLowerCase()),
-        ),
-      ),
+      inRange(range, ({ start, end }) => withTitle(returnsByProduct(start, end), productTitle)),
+  }),
+
+  returnedLines: tool({
+    description:
+      "Each returned order line: order, product, variant (size / color), quantity, order date, return date, " +
+      'reason and refund. Owners ask: "show me the returns", "which sizes came back", "list each return", ' +
+      '"why did the parka come back", "should I reorder". Use it to see the lines behind returnsByProduct. ' +
+      "The range is the order date, not the return date.",
+    inputSchema: z.object({ range: rangeSchema, productTitle: productTitleSchema }),
+    execute: async ({ range, productTitle }) =>
+      inRange(range, ({ start, end }) => withTitle(returnedLines(start, end), productTitle)),
   }),
 
   salesByDay: tool({
