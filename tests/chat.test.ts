@@ -64,6 +64,30 @@ describe("tools", () => {
     expect(output.result.map((p) => [p.productTitle, p.returnedUnits])).toEqual([["Utility Chino", 1]]);
   });
 
+  it("returnedLines gives the jackets that came back last week (AQ-03)", async () => {
+    vi.stubEnv("STORE_TODAY", "2025-10-28");
+    const output = await run(tools.returnedLines, { range: { period: "lastWeek" }, category: "Outerwear" });
+    expect(output).toMatchObject({ start: "2025-10-20", end: "2025-10-26", hasOrders: true });
+    expect(output.result.map((l) => l.productTitle)).toEqual([
+      "Alpine Down Parka",
+      "Alpine Down Parka",
+      "Alpine Down Parka",
+      "Northridge Insulated Jacket",
+    ]);
+  });
+
+  it("returnsByProduct filters by category", async () => {
+    const output = await run(tools.returnsByProduct, {
+      range: { period: "between", start: "2025-09-28", end: "2025-10-27" },
+      category: "Outerwear",
+    });
+    expect(output.result.map((p) => [p.productTitle, p.returnedUnits])).toEqual([
+      ["Alpine Down Parka", 3],
+      ["Northridge Insulated Jacket", 1],
+      ["Harbor Rain Shell", 0],
+    ]);
+  });
+
   it("returnedLines filters by title", async () => {
     const output = await run(tools.returnedLines, {
       range: { period: "between", start: "2025-05-06", end: "2025-10-27" },

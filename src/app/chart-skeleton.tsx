@@ -7,7 +7,7 @@ import styles from "./chart-skeleton.module.css";
 /** Height of each chart, and of its skeleton, so the page does not move when the chart comes. */
 export const CHART_HEIGHT = 240;
 
-type Kind = "line" | "bar" | "barHorizontal" | "stackedBar" | "stat" | "table";
+type Kind = "line" | "bar" | "barHorizontal" | "stackedBar" | "stat";
 
 /** The chart type of each metric. It is the same as in MetricChart and README.md "Charts". */
 const KINDS: Record<ToolUIPart<ChatTools>["type"], Kind> = {
@@ -16,7 +16,7 @@ const KINDS: Record<ToolUIPart<ChatTools>["type"], Kind> = {
   "tool-averageOrderValue": "stat",
   "tool-topProductsByRevenue": "barHorizontal",
   "tool-returnsByProduct": "barHorizontal",
-  "tool-returnedLines": "table",
+  "tool-returnedLines": "barHorizontal",
   "tool-repeatCustomersByChannel": "stackedBar",
 };
 
@@ -29,16 +29,6 @@ export function ChartSkeleton({ type }: { type: ToolUIPart<ChatTools>["type"] })
   const label = "Loading chart";
 
   if (kind === "stat") return <div className={`${styles.block} ${styles.stat}`} role="status" aria-label={label} />;
-
-  if (kind === "table") {
-    return (
-      <div className={styles.table} role="status" aria-label={label}>
-        {SIZES.slice(0, 4).map((_, i) => (
-          <div key={i} className={`${styles.block} ${styles.row}`} />
-        ))}
-      </div>
-    );
-  }
 
   return (
     <div className={`${styles.chart} ${styles[kind] ?? ""}`} style={{ height: CHART_HEIGHT }} role="status" aria-label={label}>

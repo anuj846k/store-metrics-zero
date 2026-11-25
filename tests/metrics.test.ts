@@ -68,17 +68,17 @@ describe("returnedLines", () => {
     ]);
   });
 
-  it("adds up to the returned units of returnsByProduct", () => {
-    const units = (start: string, end: string) => returnedLines(start, end).reduce((total, l) => total + l.quantity, 0);
-    const returned = (start: string, end: string) => returnsByProduct(start, end).reduce((total, p) => total + p.returnedUnits, 0);
-    expect(units(...ALL)).toBe(returned(...ALL));
-    expect(units("2025-10-01", "2025-10-15")).toBe(returned("2025-10-01", "2025-10-15"));
+  it("uses the return date for the range: what came back last week", () => {
+    expect(returnedLines("2025-10-20", "2025-10-26").map((l) => [l.productTitle, l.orderDate, l.returnDate])).toEqual([
+      ["Alpine Down Parka", "2025-10-14", "2025-10-26"],
+      ["Alpine Down Parka", "2025-10-07", "2025-10-24"],
+      ["Alpine Down Parka", "2025-10-02", "2025-10-21"],
+      ["Northridge Insulated Jacket", "2025-10-04", "2025-10-23"],
+    ]);
   });
 
-  it("uses the order date for the range, not the return date", () => {
-    expect(returnedLines("2025-10-20", "2025-10-26").map((l) => [l.orderId, l.orderDate, l.returnDate])).toEqual([
-      ["#3102", "2025-10-26", "2025-10-27"],
-    ]);
+  it("gives the product category", () => {
+    expect(new Set(returnedLines(...ALL).map((l) => l.productCategory))).toEqual(new Set(["Outerwear", "Tops", "Bottoms"]));
   });
 
   it("gives an empty list for a range with no orders", () => {

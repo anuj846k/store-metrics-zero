@@ -28,6 +28,15 @@ const TOOLTIP = (
   />
 );
 
+/** Returned units for each product, most first, for the chart above the returned lines table. */
+function unitsByProduct(lines: { productTitle: string; quantity: number }[]) {
+  const units: Record<string, number> = {};
+  for (const line of lines) units[line.productTitle] = (units[line.productTitle] ?? 0) + line.quantity;
+  return Object.entries(units)
+    .map(([productTitle, count]) => ({ productTitle, units: count }))
+    .sort((x, y) => y.units - x.units || x.productTitle.localeCompare(y.productTitle));
+}
+
 /** One chart (or table) for each metric. The type and the reason for each: README.md "Charts". */
 export function MetricChart({ part, loading }: { part: ToolUIPart<ChatTools>; loading: boolean }) {
   // The tool runs: show the shape of its chart until the result comes.
@@ -92,36 +101,46 @@ export function MetricChart({ part, loading }: { part: ToolUIPart<ChatTools>; lo
     case "tool-returnedLines":
       if (part.output.result.length === 0) return <div>No returned lines.</div>;
       return (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Product</th>
-                <th>Variant</th>
-                <th>Qty</th>
-                <th>Ordered</th>
-                <th>Returned</th>
-                <th>Reason</th>
-                <th>Refund</th>
-                <th>Order</th>
-              </tr>
-            </thead>
-            <tbody>
-              {part.output.result.map((line) => (
-                <tr key={line.lineItemId}>
-                  <td>{line.productTitle}</td>
-                  <td>{line.variant}</td>
-                  <td>{line.quantity}</td>
-                  <td>{line.orderDate}</td>
-                  <td>{line.returnDate}</td>
-                  <td>{line.returnReason}</td>
-                  <td>${line.refund.toFixed(2)}</td>
-                  <td>{line.orderId}</td>
+        <>
+          <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+            <BarChart data={unitsByProduct(part.output.result)} layout="vertical" margin={MARGIN} title="Returned units for each product">
+              <XAxis type="number" allowDecimals={false} />
+              <YAxis type="category" dataKey="productTitle" width={TITLE_WIDTH} />
+              {TOOLTIP}
+              <Bar maxBarSize={BAR_SIZE} dataKey="units" name="Returned units" fill={AMBER} />
+            </BarChart>
+          </ResponsiveContainer>
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Variant</th>
+                  <th>Qty</th>
+                  <th>Ordered</th>
+                  <th>Returned</th>
+                  <th>Reason</th>
+                  <th>Refund</th>
+                  <th>Order</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {part.output.result.map((line) => (
+                  <tr key={line.lineItemId}>
+                    <td>{line.productTitle}</td>
+                    <td>{line.variant}</td>
+                    <td>{line.quantity}</td>
+                    <td>{line.orderDate}</td>
+                    <td>{line.returnDate}</td>
+                    <td>{line.returnReason}</td>
+                    <td>${line.refund.toFixed(2)}</td>
+                    <td>{line.orderId}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       );
 
     case "tool-repeatCustomersByChannel":

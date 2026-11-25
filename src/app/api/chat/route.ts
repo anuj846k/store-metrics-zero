@@ -22,7 +22,7 @@ function instructions(): string {
 - Tell the exact start and end dates from the tool result in the answer.
 - If hasOrders is false, say "There are no orders from <start> to <end>". Do not say the sales were 0.
 - To compare two periods, call the tool two times with periods of the same type.
-- The data has no ad spend, ROAS, product category, or cost. If the owner asks for these, say that the data does not have them.`;
+- The data has no ad spend, ROAS, or cost. If the owner asks for these, say that the data does not have them.`;
 }
 
 export async function POST(req: Request) {

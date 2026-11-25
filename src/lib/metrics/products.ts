@@ -3,6 +3,7 @@ import { divide, Line, load, money, sum } from "./orders";
 export type ProductReturns = {
   productId: string;
   productTitle: string;
+  productCategory: string;
   fulfilledUnits: number;
   returnedUnits: number;
   returnRate: number;
@@ -15,6 +16,7 @@ export type ReturnedLine = {
   lineItemId: string;
   productId: string;
   productTitle: string;
+  productCategory: string;
   variant: string;
   quantity: number;
   orderDate: string;
@@ -45,6 +47,7 @@ export function returnsByProduct(start: string, end: string): ProductReturns[] {
       return {
         productId: lines[0].productId,
         productTitle: lines[0].productTitle,
+        productCategory: lines[0].productCategory,
         fulfilledUnits,
         returnedUnits,
         returnRate: divide(returnedUnits * 100, fulfilledUnits, 1),
@@ -56,18 +59,19 @@ export function returnsByProduct(start: string, end: string): ProductReturns[] {
 }
 
 /**
- * Each returned order line, for the reorder decision by variant. The range uses the order date,
- * as returnsByProduct does, so the quantities add up to its returnedUnits.
+ * Each order line that came back from start to end: the range uses the return date, because the owner
+ * asks what "came back" in a period. returnsByProduct uses the order date, for the rate of those orders.
  * Sorted by product title, then the newest return first.
  */
 export function returnedLines(start: string, end: string): ReturnedLine[] {
-  return load(start, end)
+  return load(start, end, "returnDate")
     .filter((line) => line.returned)
     .map((line) => ({
       orderId: line.orderId,
       lineItemId: line.lineItemId,
       productId: line.productId,
       productTitle: line.productTitle,
+      productCategory: line.productCategory,
       variant: line.variant,
       quantity: line.quantity,
       orderDate: line.orderDate,

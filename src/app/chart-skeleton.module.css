@@ -62,17 +62,6 @@
   margin: 8px 0;
 }
 
-.table {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin: 8px 0;
-}
-
-.row {
-  height: 20px;
-}
-
 @keyframes pulse {
   50% {
     opacity: 0.5;

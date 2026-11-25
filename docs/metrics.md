@@ -1,7 +1,7 @@
 # Metrics a store owner can ask about
 
 - returns_by_product: for each product, units returned ÷ fulfilled units, the refund total, and the return reasons
-- returned_lines: each returned order line: product, variant, quantity, order date, return date, reason, and refund. The range uses the order date
+- returned_lines: each order line that came back in the range: product, category, variant, quantity, order date, return date, reason, and refund. The range uses the return date
 - sales_by_day: net sales (after discounts, before refunds) on each day
 - orders_by_day: number of orders on each day
 - average_order_value: net sales ÷ number of orders

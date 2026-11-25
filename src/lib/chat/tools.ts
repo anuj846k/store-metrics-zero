@@ -15,37 +15,51 @@ function inRange<T>(input: z.infer<typeof rangeSchema>, metric: (range: Range) =
   return { ...range, hasOrders: load(range.start, range.end).length > 0, result: metric(range) };
 }
 
-const productTitleSchema = z
-  .string()
-  .optional()
-  .describe('A word in the product title, for example "jacket" or "parka".');
+const productFilterSchema = {
+  productTitle: z.string().optional().describe('A word in the product title, for example "parka". Not for a type of product.'),
+  category: z
+    .enum(["Outerwear", "Tops", "Bottoms", "Knitwear", "Accessories"])
+    .optional()
+    .describe(
+      "Product category. Use it for a type of product: jackets, coats, parkas and shells are Outerwear; " +
+        "sweaters and cardigans are Knitwear; jeans and chinos are Bottoms; shirts and tees are Tops; " +
+        "beanies and gloves are Accessories.",
+    ),
+};
 
-/** Keep the rows with the word in the product title. No word keeps all rows. */
-function withTitle<T extends { productTitle: string }>(rows: T[], productTitle?: string): T[] {
-  return rows.filter((row) => !productTitle || row.productTitle.toLowerCase().includes(productTitle.toLowerCase()));
+/** Keep the rows with the word in the product title and in the category. No filter keeps all rows. */
+function matching<T extends { productTitle: string; productCategory: string }>(
+  rows: T[],
+  { productTitle, category }: { productTitle?: string; category?: string },
+): T[] {
+  return rows.filter(
+    (row) =>
+      (!productTitle || row.productTitle.toLowerCase().includes(productTitle.toLowerCase())) &&
+      (!category || row.productCategory === category),
+  );
 }
 
 export const tools = {
   returnsByProduct: tool({
     description:
-      "Returns for each product: fulfilled units, returned units, return rate (returned ÷ fulfilled units), refunds, " +
-      'and the count of each return reason. Owners ask: "returns", "returnd", "came back", "got returned", ' +
-      '"coming back the most", "is it a sizing thing", "which jackets/coats/parkas/sneakers were returned". ' +
-      "Use it when the subject is a product. There is no category field: for jackets or coats, filter by product title.",
-    inputSchema: z.object({ range: rangeSchema, productTitle: productTitleSchema }),
-    execute: async ({ range, productTitle }) =>
-      inRange(range, ({ start, end }) => withTitle(returnsByProduct(start, end), productTitle)),
+      "Return rate for each product, for the orders placed in the range: fulfilled units, returned units, " +
+      "return rate (returned ÷ fulfilled units), refunds, and the count of each return reason. " +
+      'Owners ask: "return rate", "returns", "returnd", "how are returns doing", "is it a sizing thing". ' +
+      'For what "came back" in a period, use returnedLines.',
+    inputSchema: z.object({ range: rangeSchema, ...productFilterSchema }),
+    execute: async ({ range, ...filter }) =>
+      inRange(range, ({ start, end }) => matching(returnsByProduct(start, end), filter)),
   }),
 
   returnedLines: tool({
     description:
-      "Each returned order line: order, product, variant (size / color), quantity, order date, return date, " +
-      'reason and refund. Owners ask: "show me the returns", "which sizes came back", "list each return", ' +
-      '"why did the parka come back", "should I reorder". Use it to see the lines behind returnsByProduct. ' +
-      "The range is the order date, not the return date.",
-    inputSchema: z.object({ range: rangeSchema, productTitle: productTitleSchema }),
-    execute: async ({ range, productTitle }) =>
-      inRange(range, ({ start, end }) => withTitle(returnedLines(start, end), productTitle)),
+      "Each order line that came back in the range (the range is the return date): order, product, " +
+      "variant (size / color), quantity, order date, return date, reason and refund. " +
+      'Owners ask: "came back", "came back the most", "got returned", "coming back", "which sizes came back", ' +
+      '"list each return", "why did the parka come back", "should I reorder".',
+    inputSchema: z.object({ range: rangeSchema, ...productFilterSchema }),
+    execute: async ({ range, ...filter }) =>
+      inRange(range, ({ start, end }) => matching(returnedLines(start, end), filter)),
   }),
 
   salesByDay: tool({

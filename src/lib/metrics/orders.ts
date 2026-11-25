@@ -12,6 +12,7 @@ export type Line = {
   salesChannel: string;
   productId: string;
   productTitle: string;
+  productCategory: string;
   variant: string;
   quantity: number;
   lineTotalCents: number;
@@ -29,8 +30,8 @@ export function ordersPath(): string {
   return process.env.ORDERS_PATH ?? path.join(process.cwd(), "data", "order-history.csv");
 }
 
-/** Line items with an order date from start to end, both included. Dates are "YYYY-MM-DD". */
-export function load(start: string, end: string): Line[] {
+/** Line items with an order date (or, with by = "returnDate", a return date) from start to end, both included. Dates are "YYYY-MM-DD". */
+export function load(start: string, end: string, by: "orderDate" | "returnDate" = "orderDate"): Line[] {
   for (const value of [start, end]) {
     if (!ISO_DATE.test(value) || Number.isNaN(Date.parse(value))) {
       throw new Error(`${value} is not a YYYY-MM-DD date`);
@@ -41,7 +42,7 @@ export function load(start: string, end: string): Line[] {
   const keys = header.split(",");
   return rows
     .map((row) => parse(Object.fromEntries(row.split(",").map((value, i) => [keys[i], value]))))
-    .filter((line) => start <= line.orderDate && line.orderDate <= end);
+    .filter((line) => start <= line[by] && line[by] <= end);
 }
 
 /** All dates from start to end, both included. */
@@ -84,6 +85,7 @@ function parse(row: Record<string, string>): Line {
     salesChannel: row.sales_channel,
     productId: row.product_id,
     productTitle: row.product_title,
+    productCategory: row.product_category,
     variant: row.variant,
     quantity: Number(row.quantity),
     lineTotalCents: toCents(row.line_total),
