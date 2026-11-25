@@ -93,6 +93,7 @@ Screenshots (dark mode, `STORE_TODAY=2025-10-28`):
 | "returns by product last month, and list each returned line": horizontal bar and table | ![Return rate bar chart and returned lines table](docs/screenshots/returns.jpg) |
 | "top products, repeat customers by channel and average order value last 30 days": horizontal bar and stacked bar | ![Top products bar chart and repeat customers stacked bar chart](docs/screenshots/products-customers.jpg) |
 | Same question: average order value as one number | ![Average order value](docs/screenshots/average-order-value.jpg) |
+| "sales per day last month", mouse on 2025-09-24: the tooltip gives the full date and the value | ![Line chart tooltip on 2025-09-24](docs/screenshots/tooltip.jpg) |
 | Skeletons while the tools run (horizontal bar and table) | ![Chart skeletons](docs/screenshots/skeletons.jpg) |
 
 Errors: in dev the stream shows the cause (for example, a rate limit). In prod it shows "The answer failed. Try again."
