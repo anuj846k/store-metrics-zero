@@ -1,4 +1,3 @@
-/** Expected values are for data/order-history.csv. */
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -7,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { repeatCustomersByChannel } from "@/lib/metrics/customers";
 import { ordersPath } from "@/lib/metrics/orders";
 import { returnedLines, returnsByProduct, topProductsByRevenue } from "@/lib/metrics/products";
-import { averageOrderValue, ordersByDay, salesByDay } from "@/lib/metrics/sales";
+import { averageOrderValue, ordersByDay, salesByDay, salesSummary } from "@/lib/metrics/sales";
 
 const ALL = ["2025-05-06", "2025-10-27"] as const;
 const EMPTY = ["2024-01-01", "2024-01-03"] as const;
@@ -97,6 +96,16 @@ describe("salesByDay", () => {
   });
 });
 
+describe("salesSummary", () => {
+  it("gives the total net sales and orders for the range", () => {
+    expect(salesSummary("2025-09-28", "2025-10-27")).toEqual({ netSales: 2261.25, orderCount: 13 });
+  });
+
+  it("filters by sales channel (AQ-01)", () => {
+    expect(salesSummary("2025-09-28", "2025-10-27", "Online Store")).toEqual({ netSales: 1413.1, orderCount: 7 });
+  });
+});
+
 describe("ordersByDay", () => {
   it("counts distinct orders for each day", () => {
     const days = ordersByDay(...ALL);
@@ -131,7 +140,7 @@ describe("topProductsByRevenue", () => {
 
   it("accepts a limit", () => {
     expect(topProductsByRevenue(...ALL, 1)).toEqual([
-      { productId: "P-1001", productTitle: "Alpine Down Parka", units: 4, revenue: 854.1 },
+      { productId: "P-1001", productTitle: "Alpine Down Parka", productCategory: "Outerwear", units: 4, revenue: 854.1 },
     ]);
   });
 });

@@ -1,4 +1,3 @@
-/** Date ranges are the examples in docs/date-rules.md. Metric values are for data/order-history.csv. */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { resolveRange, type RangeInput } from "@/lib/chat/dates";
@@ -46,7 +45,6 @@ describe("resolveRange", () => {
   });
 });
 
-/** Call a tool as the AI SDK does, and give the typed output. */
 async function run<T extends { execute?: (...args: never[]) => unknown }>(
   metricTool: T,
   input: Parameters<NonNullable<T["execute"]>>[0],
@@ -94,6 +92,29 @@ describe("tools", () => {
       productTitle: "parka",
     });
     expect(output.result.map((l) => l.variant)).toEqual(["S / Black", "L / Navy", "M / Black"]);
+  });
+
+  it("salesByDay gives the Online Store total in summary (AQ-01)", async () => {
+    vi.stubEnv("STORE_TODAY", "2025-10-28");
+    const output = await run(tools.salesByDay, {
+      range: { period: "lastNDays", days: 30 },
+      salesChannel: "Online Store",
+    });
+    expect(output).toMatchObject({
+      start: "2025-09-28",
+      end: "2025-10-27",
+      salesChannel: "Online Store",
+      summary: { netSales: 1413.1, orderCount: 7 },
+    });
+  });
+
+  it("topProductsByRevenue filters by category before the limit", async () => {
+    const output = await run(tools.topProductsByRevenue, {
+      range: { period: "between", start: "2025-05-06", end: "2025-10-27" },
+      category: "Knitwear",
+      limit: 1,
+    });
+    expect(output.result.map((p) => p.productCategory)).toEqual(["Knitwear"]);
   });
 
   it("topProductsByRevenue passes the limit", async () => {

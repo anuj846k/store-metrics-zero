@@ -1,7 +1,7 @@
 # Store Metrics
 
 Metrics that a store owner can ask about, calculated from a Shopify order history CSV.
-Next.js (App Router), TypeScript, Vitest, pnpm.
+Next.js (App Router), TypeScript, Tailwind CSS v4, shadcn/ui, Recharts, Vitest, pnpm.
 
 ## Setup
 
@@ -58,7 +58,8 @@ STORE_TODAY=2025-10-28                        # fixed today for this dataset; no
 | File | Job |
 |---|---|
 | `src/app/api/chat/route.ts` | `POST /api/chat`. AI SDK `streamText` with the tools, `isStepCount(5)`, `createUIMessageStreamResponse`. Instructions give today and the date rules. |
-| `src/app/page.tsx` | `useChat` from `@ai-sdk/react`. Shows text as it arrives and the name of each tool call. |
+| `src/components/chat/` | `useChat` from `@ai-sdk/react`. Shows the answer as markdown as it arrives (Streamdown), and each tool call (shadcn Collapsible and Badge). |
+| `src/components/metrics/` | One chart, table or card for each tool result (shadcn Chart, Table, Card, Skeleton). |
 | `src/lib/chat/tools.ts` | One tool for each metric. Descriptions use the words that merchants typed (`merchant_report_requests_oct27_*.xlsx`), for example "jakets returnd last wk". |
 | `src/lib/chat/dates.ts` | Changes the date phrase into `start` and `end` with `docs/date-rules.md`. |
 
@@ -66,14 +67,14 @@ How a question goes to a tool:
 
 1. The model selects the tool from its description. "Came back" goes to `returnedLines` when the subject is a product, and to `repeatCustomersByChannel` when the subject is a customer. "Return rate" goes to `returnsByProduct`.
 2. The model gives the date phrase as `range.period` (`lastWeek`, `lastNDays` + `days`, `month` + `month`, `between` + `start`/`end`). It does not calculate dates. The code calculates them, because a model makes errors with weekdays and month ends.
-3. Some tools take more inputs: `returnsByProduct` and `returnedLines` take `productTitle` ("parka") and `category` ("jackets" → `Outerwear`), and `topProductsByRevenue` takes `limit` ("top 10").
+3. Some tools take more inputs: `returnsByProduct`, `returnedLines` and `topProductsByRevenue` take `productTitle` ("parka") and `category` ("jackets" → `Outerwear`). `salesByDay` and `ordersByDay` take `salesChannel` ("online store only") and give the total in `summary`, so the model does not add the days. `topProductsByRevenue` takes `limit` ("top 10").
 4. Each tool result has `start`, `end`, `hasOrders` and `result`. The answer gives the exact dates. When `hasOrders` is false, it says "There are no orders from <start> to <end>".
 5. The data has no ad spend, ROAS, cost or stock. The model says this and does not use the nearest tool.
 
 ### Charts
 
-The chat shows one chart (or table) below each tool result (`src/app/metric-chart.tsx`, Recharts). When `hasOrders` is false, it shows no chart.
-While the tool runs, a gray skeleton of the same chart type shows in its place (`src/app/chart-skeleton.tsx`), at the same height, so the page does not move. If the request fails or stops, the skeleton goes.
+The chat shows one chart (or table) below each tool result (`src/components/metrics/metric-view.tsx`, shadcn Chart on Recharts). When `hasOrders` is false, or a tool finds no products, it shows no chart.
+While the tool runs, a gray skeleton of the same chart type shows in its place (`src/components/metrics/metric-skeleton.tsx`), at the same height, so the page does not move. If the request fails or stops, the skeleton goes.
 
 | Metric | Chart | Why this chart |
 |---|---|---|

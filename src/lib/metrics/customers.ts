@@ -21,10 +21,6 @@ export type RepeatCustomersByChannel = {
   breakdowns: { salesChannel: ChannelCustomers[] };
 };
 
-/**
- * is_repeat_customer is set for each order: it is true when the customer bought before,
- * also before the start of the range. Channels with the most orders are first.
- */
 export function repeatCustomersByChannel(start: string, end: string): RepeatCustomersByChannel {
   const lines = load(start, end);
   const channels: Record<string, Line[]> = {};

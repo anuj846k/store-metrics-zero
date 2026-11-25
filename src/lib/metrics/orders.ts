@@ -1,8 +1,6 @@
-/** Read the order history file and give the shared helpers for the metric functions. */
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import path from "node:path";
 
-/** Money values are integer cents, so sums have no floating-point error. */
 export type Line = {
   orderId: string;
   lineItemId: string;
@@ -30,22 +28,34 @@ export function ordersPath(): string {
   return process.env.ORDERS_PATH ?? path.join(process.cwd(), "data", "order-history.csv");
 }
 
-/** Line items with an order date (or, with by = "returnDate", a return date) from start to end, both included. Dates are "YYYY-MM-DD". */
-export function load(start: string, end: string, by: "orderDate" | "returnDate" = "orderDate"): Line[] {
+export type LoadOptions = { by?: "orderDate" | "returnDate"; salesChannel?: string };
+
+let cache: { file: string; mtimeMs: number; lines: Line[] } | undefined;
+
+function readLines(): Line[] {
+  const file = ordersPath();
+  const { mtimeMs } = statSync(file);
+  if (cache?.file !== file || cache.mtimeMs !== mtimeMs) {
+    const [header, ...rows] = readFileSync(file, "utf8").trim().split(/\r?\n/);
+    const keys = header.split(",");
+    const lines = rows.map((row) => parse(Object.fromEntries(row.split(",").map((value, i) => [keys[i], value]))));
+    cache = { file, mtimeMs, lines };
+  }
+  return cache.lines;
+}
+
+export function load(start: string, end: string, { by = "orderDate", salesChannel }: LoadOptions = {}): Line[] {
   for (const value of [start, end]) {
     if (!ISO_DATE.test(value) || Number.isNaN(Date.parse(value))) {
       throw new Error(`${value} is not a YYYY-MM-DD date`);
     }
   }
   if (start > end) throw new Error(`start ${start} is after end ${end}`);
-  const [header, ...rows] = readFileSync(ordersPath(), "utf8").trim().split(/\r?\n/);
-  const keys = header.split(",");
-  return rows
-    .map((row) => parse(Object.fromEntries(row.split(",").map((value, i) => [keys[i], value]))))
-    .filter((line) => start <= line[by] && line[by] <= end);
+  return readLines().filter(
+    (line) => start <= line[by] && line[by] <= end && (!salesChannel || line.salesChannel === salesChannel),
+  );
 }
 
-/** All dates from start to end, both included. */
 export function eachDay(start: string, end: string): string[] {
   const days: string[] = [];
   for (let time = Date.parse(start); time <= Date.parse(end); time += DAY_MS) {
@@ -62,7 +72,6 @@ export function money(cents: number): number {
   return cents / 100;
 }
 
-/** part / whole, rounded half up. Gives 0 when whole is 0. */
 export function divide(part: number, whole: number, decimals: number): number {
   if (!whole) return 0;
   const scale = 10 ** decimals;

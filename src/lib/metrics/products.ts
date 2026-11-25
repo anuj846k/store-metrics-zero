@@ -28,14 +28,11 @@ export type ReturnedLine = {
 export type ProductRevenue = {
   productId: string;
   productTitle: string;
+  productCategory: string;
   units: number;
   revenue: number;
 };
 
-/**
- * Highest return rate first. The rate uses fulfilled units only, because an unshipped unit
- * cannot come back. The file has no returned quantity, so a returned line counts all its units.
- */
 export function returnsByProduct(start: string, end: string): ProductReturns[] {
   return Object.values(byProduct(load(start, end)))
     .map((lines) => {
@@ -58,13 +55,8 @@ export function returnsByProduct(start: string, end: string): ProductReturns[] {
     .sort((a, b) => b.returnRate - a.returnRate || b.returnedUnits - a.returnedUnits || a.productTitle.localeCompare(b.productTitle));
 }
 
-/**
- * Each order line that came back from start to end: the range uses the return date, because the owner
- * asks what "came back" in a period. returnsByProduct uses the order date, for the rate of those orders.
- * Sorted by product title, then the newest return first.
- */
 export function returnedLines(start: string, end: string): ReturnedLine[] {
-  return load(start, end, "returnDate")
+  return load(start, end, { by: "returnDate" })
     .filter((line) => line.returned)
     .map((line) => ({
       orderId: line.orderId,
@@ -82,12 +74,12 @@ export function returnedLines(start: string, end: string): ReturnedLine[] {
     .sort((a, b) => a.productTitle.localeCompare(b.productTitle) || b.returnDate.localeCompare(a.returnDate));
 }
 
-/** Revenue is net sales: after discounts, before refunds. */
 export function topProductsByRevenue(start: string, end: string, limit = 5): ProductRevenue[] {
   return Object.values(byProduct(load(start, end)))
     .map((lines) => ({
       productId: lines[0].productId,
       productTitle: lines[0].productTitle,
+      productCategory: lines[0].productCategory,
       units: sum(lines.map((line) => line.quantity)),
       revenueCents: sum(lines.map((line) => line.lineTotalCents)),
     }))

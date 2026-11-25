@@ -1,4 +1,3 @@
-/** Change a date phrase from the store owner into an exact range. Rules: docs/date-rules.md. */
 import { z } from "zod";
 
 const DAY_MS = 86_400_000;
@@ -40,7 +39,6 @@ export const rangeSchema = z
 export type RangeInput = z.infer<typeof rangeSchema>;
 export type Range = { start: string; end: string };
 
-/** Today in the store time zone, as YYYY-MM-DD. STORE_TODAY fixes it, for example for a dataset that ended. */
 export function storeToday(): string {
   return process.env.STORE_TODAY ?? new Date().toLocaleDateString("en-CA");
 }
@@ -93,7 +91,6 @@ function addDays(value: string, days: number): string {
   return new Date(Date.parse(value) + days * DAY_MS).toISOString().slice(0, 10);
 }
 
-/** Day 0 is the last day of the month before, so day(y, m + 1, 0) is the last day of month m. */
 function day(year: number, month: number, dayOfMonth: number): string {
   return new Date(Date.UTC(year, month - 1, dayOfMonth)).toISOString().slice(0, 10);
 }
