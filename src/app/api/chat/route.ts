@@ -27,6 +27,8 @@ function instructions(): string {
 
 export async function POST(req: Request) {
   const { messages }: { messages: UIMessage[] } = await req.json();
+  const question = messages.at(-1)?.parts.find((part) => part.type === "text")?.text;
+  console.log(`[chat] question: ${JSON.stringify(question)}`);
 
   const result = streamText({
     model: openrouter.chat(process.env.OPENROUTER_MODEL ?? "google/gemini-3.5-flash-lite"),
@@ -34,6 +36,16 @@ export async function POST(req: Request) {
     messages: await convertToModelMessages(messages),
     tools,
     stopWhen: isStepCount(5),
+    // Log each step in the server terminal: the tool calls, their results, and the answer.
+    onStepEnd: (step) => {
+      for (const call of step.toolCalls) {
+        console.log(`[chat] step ${step.stepNumber} tool call: ${call.toolName} ${JSON.stringify(call.input)}`);
+      }
+      for (const result of step.toolResults) {
+        console.log(`[chat] step ${step.stepNumber} tool result: ${result.toolName} ${JSON.stringify(result.output)}`);
+      }
+      if (step.text) console.log(`[chat] step ${step.stepNumber} answer: ${step.text}`);
+    },
   });
 
   return createUIMessageStreamResponse({

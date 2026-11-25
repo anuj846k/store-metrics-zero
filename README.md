@@ -71,15 +71,58 @@ How a question goes to a tool:
 
 Errors: in dev the stream shows the cause (for example, a rate limit). In prod it shows "The answer failed. Try again."
 
-### Why Gemini 3.5 Flash Lite
+### Model: why Gemini 3.5 Flash Lite, not Gemma 4 31B (free)
 
-- It accepts `tools` and `tool_choice`, so it can do function calling. The metric tools need this. It also accepts `response_format` and `structured_outputs`.
-- It answered the real question "jakets returnd last wk" (CRR-25-10-27-0174) on the first try. It selected `returnsByProduct` with `{ range: { period: "lastWeek" }, productTitle: "jacket" }` and gave the exact dates 2025-10-20 to 2025-10-26.
-- It is reliable. We tried `google/gemma-4-31b-it:free` first. Only one upstream provider (Google AI Studio) serves the free version, and all OpenRouter users share it. Most requests failed with 429 "temporarily rate-limited upstream". One request selected the correct tool, but the second step (the answer) got the 429.
-- It is fast and costs little: $0.30 per million input tokens and $2.50 per million output tokens on OpenRouter. One question uses two model calls (tool call, then answer).
-- The date math is in `dates.ts`, not in the model, and zod checks the tool inputs. Thus a small, fast model is sufficient.
+We started with `google/gemma-4-31b-it:free`. It accepts `tools` and `tool_choice` for function calling, and `response_format` for JSON output without JSON-schema enforcement. Thus `dates.ts` calculates the dates and zod checks the tool inputs, not the model.
 
-To change the model, set `OPENROUTER_MODEL`. Example: `google/gemma-4-31b-it` (paid, $0.20 in / $0.40 out per million tokens, many providers).
+The free models have a high rate limit. Only one upstream provider (Google AI Studio) serves the free Gemma, and all OpenRouter users share it. Most of our requests failed with 429 "temporarily rate-limited upstream". One request selected the correct tool, but the second step (the answer) got the 429.
+
+We had a paid Gemini key, so we added it to OpenRouter (BYOK) and changed to `google/gemini-3.5-flash-lite`:
+
+- It also accepts `tools`, `tool_choice`, `response_format` and `structured_outputs`.
+- It answered the real merchant questions on the first try (see the terminal output below).
+- It is fast and costs little: $0.30 per million input tokens and $2.50 per million output tokens. One question uses two model calls (tool call, then answer).
+
+To change the model, set `OPENROUTER_MODEL`. The code does not change.
+
+### Claude Code instruction for the chat (quote)
+
+```text
+Build the chat streaming route that will print the character as they arrive , use vercel ai sdk
+built in functions for it , the docs of the ai sdk are here https://ai-sdk.dev/docs/introduction
+and that should include tools as a context so it routes to correct tools .
+Use the OPENROUTER_MODEL and OPENROUTER_API_KEY for the AI Engine , metrics functions and their
+description are in the md files
+each tool should be taking different different inputs based on the question like when merchant
+type last week , use todays date and previous week see the @docs/date-rules.md
+```
+
+### Terminal output for one question
+
+Real merchant question CRR-25-10-27-0251, with `STORE_TODAY=2025-10-28`:
+
+```bash
+curl -N -X POST localhost:3000/api/chat -H 'Content-Type: application/json' \
+  -d '{"messages":[{"id":"1","role":"user","parts":[{"type":"text","text":"top 10 products by revenue Oct 1 to Oct 15"}]}]}'
+```
+
+`pnpm dev` terminal (the route logs each step):
+
+```text
+[chat] question: "top 10 products by revenue Oct 1 to Oct 15"
+[chat] step 0 tool call: topProductsByRevenue {"range":{"period":"between","start":"2025-10-01","end":"2025-10-15"},"limit":10}
+[chat] step 0 tool result: topProductsByRevenue {"start":"2025-10-01","end":"2025-10-15","hasOrders":true,"result":[{"productId":"P-1001","productTitle":"Alpine Down Parka","units":3,"revenue":657},{"productId":"P-1002","productTitle":"Northridge Insulated Jacket","units":2,"revenue":294.15},{"productId":"P-1008","productTitle":"Selvedge Slim Jeans","units":2,"revenue":212.4},{"productId":"P-1005","productTitle":"Cable Knit Cardigan","units":1,"revenue":98},{"productId":"P-1011","productTitle":"Leather Gloves","units":1,"revenue":46},{"productId":"P-1010","productTitle":"Wool Beanie","units":1,"revenue":24}]}
+[chat] step 1 answer: From October 1 to October 15, 2025, here are the top products by revenue:
+
+1. **Alpine Down Parka** – $657.00 (3 units)
+2. **Northridge Insulated Jacket** – $294.15 (2 units)
+3. **Selvedge Slim Jeans** – $212.40 (2 units)
+4. **Cable Knit Cardigan** – $98.00 (1 unit)
+5. **Leather Gloves** – $46.00 (1 unit)
+6. **Wool Beanie** – $24.00 (1 unit)
+```
+
+The model selected `topProductsByRevenue`, set `limit` to 10 from "top 10", and gave the exact dates. Only 6 products had sales in the range, so the answer has 6 rows.
 
 ## Output for last week
 
