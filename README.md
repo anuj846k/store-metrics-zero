@@ -43,6 +43,44 @@ Definitions: [`docs/metrics.md`](docs/metrics.md). Date phrases: [`docs/date-rul
 The data ends on 2025-10-27, so "today" is fixed at **Tuesday, 2025-10-28**.
 A week is Monday to Sunday, so **last week = 2025-10-20 to 2025-10-26**.
 
+## Chat
+
+The owner asks a question on the home page. The answer streams character by character.
+
+```bash
+# .env
+OPENROUTER_API_KEY=...
+OPENROUTER_MODEL=google/gemini-3.5-flash-lite   # default if not set
+STORE_TODAY=2025-10-28                        # fixed today for this dataset; not set = the real date
+```
+
+| File | Job |
+|---|---|
+| `src/app/api/chat/route.ts` | `POST /api/chat`. AI SDK `streamText` with the tools, `isStepCount(5)`, `createUIMessageStreamResponse`. Instructions give today and the date rules. |
+| `src/app/page.tsx` | `useChat` from `@ai-sdk/react`. Shows text as it arrives and the name of each tool call. |
+| `src/lib/chat/tools.ts` | One tool for each metric. Descriptions use the words that merchants typed (`merchant_report_requests_oct27_*.xlsx`), for example "jakets returnd last wk". |
+| `src/lib/chat/dates.ts` | Changes the date phrase into `start` and `end` with `docs/date-rules.md`. |
+
+How a question goes to a tool:
+
+1. The model selects the tool from its description. "Came back" goes to `returnsByProduct` when the subject is a product, and to `repeatCustomersByChannel` when the subject is a customer.
+2. The model gives the date phrase as `range.period` (`lastWeek`, `lastNDays` + `days`, `month` + `month`, `between` + `start`/`end`). It does not calculate dates. The code calculates them, because a model makes errors with weekdays and month ends.
+3. Some tools take more inputs: `returnsByProduct` takes `productTitle` ("jacket"), and `topProductsByRevenue` takes `limit` ("top 10").
+4. Each tool result has `start`, `end`, `hasOrders` and `result`. The answer gives the exact dates. When `hasOrders` is false, it says "There are no orders from <start> to <end>".
+5. The data has no ad spend, ROAS or category. The model says this and does not use the nearest tool.
+
+Errors: in dev the stream shows the cause (for example, a rate limit). In prod it shows "The answer failed. Try again."
+
+### Why Gemini 3.5 Flash Lite
+
+- It accepts `tools` and `tool_choice`, so it can do function calling. The metric tools need this. It also accepts `response_format` and `structured_outputs`.
+- It answered the real question "jakets returnd last wk" (CRR-25-10-27-0174) on the first try. It selected `returnsByProduct` with `{ range: { period: "lastWeek" }, productTitle: "jacket" }` and gave the exact dates 2025-10-20 to 2025-10-26.
+- It is reliable. We tried `google/gemma-4-31b-it:free` first. Only one upstream provider (Google AI Studio) serves the free version, and all OpenRouter users share it. Most requests failed with 429 "temporarily rate-limited upstream". One request selected the correct tool, but the second step (the answer) got the 429.
+- It is fast and costs little: $0.30 per million input tokens and $2.50 per million output tokens on OpenRouter. One question uses two model calls (tool call, then answer).
+- The date math is in `dates.ts`, not in the model, and zod checks the tool inputs. Thus a small, fast model is sufficient.
+
+To change the model, set `OPENROUTER_MODEL`. Example: `google/gemma-4-31b-it` (paid, $0.20 in / $0.40 out per million tokens, many providers).
+
 ## Output for last week
 
 ```text
