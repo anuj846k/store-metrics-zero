@@ -153,32 +153,35 @@ The model selected `topProductsByRevenue`, set `limit` to 10 from "top 10", and 
 
 ## Live demo and acceptance results
 
-Live app, open to anyone with no sign-in: https://store-metrics-zero-ndg2.vercel.app (Vercel, production, `STORE_TODAY=2025-10-28`).
+Live app, open to anyone with no sign-in: https://store-metrics-zero-ndg2.vercel.app (Vercel, production, `STORE_TODAY=2025-10-28`). Each push to `main` deploys it.
 
-On 2026-11-25 we asked the live app the winter jacket question and 5 questions from Erik Vogt's acceptance set (`Erik Vogt's Acceptance Question Set for the Live Dashboard.xlsx`). Each question was asked in a new chat in Chrome. "Seconds to first chart" is from Enter to the first chart or table on the page. "Correct call" uses Erik's rule: the correct tool, date range and filter. We also checked each answer against `data/order-history.csv`.
+On 2026-11-25 we asked the live app the winter jacket question and 5 questions from Erik Vogt's acceptance set (`Erik Vogt's Acceptance Question Set for the Live Dashboard.xlsx`), each in a new chat in Chrome. "Seconds to first chart" is from Enter to the first chart or table on the page. "Correct call" uses Erik's rule: the correct tool, date range and filter. We checked each answer against `data/order-history.csv`.
+
+Rows marked "rerun" are from the deploy of commit `f46c930` (return date for `returnedLines`, category filter). AQ-10 and AQ-16 are from the deploy before it, `f1ed083`. That change does not touch their tools.
 
 | ID | Question | Tool called | Arguments sent | Correct call | Rendered without crash | Seconds to first chart |
 |---|---|---|---|---|---|---|
-| — | winter jacket returns | `returnsByProduct` | no range (default last 30 days: 2025-09-28..2025-10-27), `productTitle: "jacket"` | N | Y | 3.17 |
-| AQ-01 | sales last 30 days online store only | `salesByDay` | `lastNDays` 30 → 2025-09-28..2025-10-27 | N | Y | 1.10 |
-| AQ-03 | which jackets came back the most last week | `returnsByProduct` ×2, `returnedLines` | `lastWeek` → 2025-10-20..2025-10-26, `productTitle: "jacket"` / `"parka"` | Y | Y | 1.15 |
-| AQ-07 | what's my ad spend on Meta this month | none | — | Y | Y | — (no chart, as expected) |
+| — (rerun) | winter jacket returns | `returnsByProduct` ×2 | `productTitle: "winter jacket"` (empty), then `category: "Outerwear"`; no range, so the default last 30 days: 2025-09-28..2025-10-27 | Y | Y | 1.21 |
+| AQ-01 (rerun) | sales last 30 days online store only | `salesByDay` | `lastNDays` 30 → 2025-09-28..2025-10-27 | N | Y | 0.87 |
+| AQ-03 (rerun) | which jackets came back the most last week | `returnedLines` | `lastWeek` → 2025-10-20..2025-10-26, `category: "Outerwear"` | Y | Y | 1.34 |
+| AQ-07 (rerun) | what's my ad spend on Meta this month | none | — | Y | Y | — (no chart, as expected) |
 | AQ-10 | how many ppl bought twice in october | `repeatCustomersByChannel` | `month` 10, 2025 → 2025-10-01..2025-10-31 | Y | Y | 1.15 |
 | AQ-16 | top return reasons for jakets in september | `returnsByProduct` ×2 | `month` 9, 2025, `productTitle: "jaket"`, then `"jacket"` | Y | Y | 2.16 |
 
-Score for these 6: correct call 4 of 6, render crashes 0, slowest first chart 3.17 s. Erik's pass rules are at least 18 of 20 correct calls, 0 crashes, and under 5.0 s on every question. Thus the crash and time rules pass here, but a 4-of-6 rate would fail the call rule.
+Score for these 6: correct call 5 of 6, render crashes 0, slowest first chart 2.16 s. Erik's pass rules are at least 18 of 20 correct calls, 0 crashes, and under 5.0 s on every question.
 
-![Live app: winter jacket returns](docs/screenshots/live-winter-jackets.jpg)
+![Live app: AQ-03 rerun, jackets that came back last week](docs/screenshots/live-aq-03.jpg)
 
-What the answers got wrong (checked against the CSV):
+Notes (checked against the CSV):
 
-- **Winter jacket returns:** the tool filters by product title only, so "jacket" finds only the Northridge Insulated Jacket (1 return). The CSV has `product_category`, and 4 Outerwear lines were returned in the range: 3 Alpine Down Parka (Too small, Too large, Defective) and 1 jacket. The answer misses the 3 parka returns.
-- **AQ-01:** the sales tool has no channel filter, and the answer says the data does not separate channels. That is not true: the CSV has `sales_channel`. The Online Store total is $1,413.10. The model also added the days itself and gave a wrong total: $2,263.25 in one run and $2,410.25 in another. The correct total for all channels is $2,261.25. The range is one day later than Erik expects (2025-09-27..2025-10-26), because our fixed today is 2025-10-28.
-- **AQ-03:** the call matches Erik's range and filter, but the answer "no returns for jackets last week" is wrong for the merchant. The range uses the order date. By return date, 4 Outerwear items came back from 2025-10-20 to 2025-10-26: 3 Alpine Down Parka and 1 Northridge Insulated Jacket.
-- **AQ-10:** correct. Note that "repeat" means the customer bought before, not exactly twice.
-- **AQ-16:** the model first sent the misspelled "jaket", got an empty chart, and then sent "jacket". The answer (1 return, "Changed mind") is correct. In one other run (an HTTP client, not the browser), the stream stopped in the middle of the answer with "The answer failed. Try again."
+- **AQ-03:** fixed. Before the rerun, the range used the order date, so the answer was "no returns". `returnedLines` now uses the return date. The chart shows Alpine Down Parka 3 and Northridge Insulated Jacket 1, and the table lists the 4 lines (Defective, Too large, Too small, Too small). The text answer is correct but puts the jacket line in the parka list.
+- **Winter jacket returns:** fixed by the category filter. The answer gives Alpine Down Parka 3 of 3 returned (Defective, Too large, Too small, $657.00) and Northridge Insulated Jacket 1 of 2 (Too small, $135.15). The first call (`"winter jacket"` as a title) gave an empty chart before the correct one.
+- **AQ-01:** still wrong. The sales tool has no channel filter, and the answer says that channel filtering is not available. The Online Store total is $1,413.10. The model also adds the days itself and gave $2,310.25 (in earlier runs $2,263.25 and $2,410.25). The correct total for all channels is $2,261.25.
+- **AQ-07:** correct: "The data does not have ad spend or ROAS." No chart.
+- **AQ-10:** correct. "Repeat" means the customer bought before, not exactly twice.
+- **AQ-16:** correct after the model sent "jacket" in place of the misspelled "jaket". The first, empty call shows an empty chart. In one earlier HTTP-client run, the stream stopped in the middle of the answer with "The answer failed. Try again."
 
-Changes that would fix these misses: a category filter on the product tools, a channel filter on the sales tools, a return-date range for "came back" questions, and a total in each tool result so that the model does not add numbers.
+Open fixes: a channel filter on the sales tools (AQ-01, AQ-17), a total in each tool result so that the model does not add numbers, and no chart for an empty result.
 
 ## Output for last week
 
