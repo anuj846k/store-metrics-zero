@@ -73,7 +73,7 @@ How a question goes to a tool:
 ### Charts
 
 The chat shows one chart (or table) below each tool result (`src/app/metric-chart.tsx`, Recharts). When `hasOrders` is false, it shows no chart.
-While the tool runs, a gray skeleton of the same chart type shows in its place (`src/app/chart-skeleton.tsx`), at the same height, so the page does not move.
+While the tool runs, a gray skeleton of the same chart type shows in its place (`src/app/chart-skeleton.tsx`), at the same height, so the page does not move. If the request fails or stops, the skeleton goes.
 
 | Metric | Chart | Why this chart |
 |---|---|---|
@@ -84,6 +84,16 @@ While the tool runs, a gray skeleton of the same chart type shows in its place (
 | top_products_by_revenue | Bar (horizontal) | It is a ranked list. Long product titles are easy to read on the vertical axis. |
 | returns_by_product | Bar (horizontal), return rate % | It compares products. Highest rate is first, so the product to stop reordering is at the top. |
 | repeat_customers_by_channel | Stacked bar | Each channel bar is all its orders, split into repeat and new. You see the size and the share together. |
+
+Screenshots (dark mode, `STORE_TODAY=2025-10-28`):
+
+| Question | Screenshot |
+|---|---|
+| "sales per day and orders per day last month": line and bar | ![Sales by day line chart and orders by day bar chart](docs/screenshots/sales-orders.jpg) |
+| "returns by product last month, and list each returned line": horizontal bar and table | ![Return rate bar chart and returned lines table](docs/screenshots/returns.jpg) |
+| "top products, repeat customers by channel and average order value last 30 days": horizontal bar and stacked bar | ![Top products bar chart and repeat customers stacked bar chart](docs/screenshots/products-customers.jpg) |
+| Same question: average order value as one number | ![Average order value](docs/screenshots/average-order-value.jpg) |
+| Skeletons while the tools run (horizontal bar and table) | ![Chart skeletons](docs/screenshots/skeletons.jpg) |
 
 Errors: in dev the stream shows the cause (for example, a rate limit). In prod it shows "The answer failed. Try again."
 

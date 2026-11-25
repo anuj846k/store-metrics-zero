@@ -10,22 +10,41 @@ import styles from "./page.module.css";
 const BLUE = "#3b82f6";
 const AMBER = "#f59e0b";
 /** Width of the product title axis in the horizontal bar charts. */
-const TITLE_WIDTH = 160;
+const TITLE_WIDTH = 180;
+/** Bars stay thin when there are only a few products or channels. */
+const BAR_SIZE = 32;
+/** Space on the right, so the last date on the x axis is not cut off. */
+const MARGIN = { top: 8, right: 24, bottom: 0, left: 0 };
+
+/** "2025-09-30" becomes "09-30", so the dates fit on the x axis. The tooltip shows the full date. */
+const monthDay = (date: string) => date.slice(5);
+
+/** Tooltip in the page colors, so it is clear in light and dark mode. */
+const TOOLTIP = (
+  <Tooltip
+    contentStyle={{ background: "var(--background)", border: "1px solid #888", borderRadius: 8 }}
+    labelStyle={{ color: "var(--foreground)" }}
+    cursor={{ fill: "rgba(128, 128, 128, 0.15)" }}
+  />
+);
 
 /** One chart (or table) for each metric. The type and the reason for each: README.md "Charts". */
-export function MetricChart({ part }: { part: ToolUIPart<ChatTools> }) {
+export function MetricChart({ part, loading }: { part: ToolUIPart<ChatTools>; loading: boolean }) {
   // The tool runs: show the shape of its chart until the result comes.
-  if (part.state === "input-streaming" || part.state === "input-available") return <ChartSkeleton type={part.type} />;
+  // When the request fails or stops, loading is false, so the skeleton goes.
+  if (part.state === "input-streaming" || part.state === "input-available") {
+    return loading ? <ChartSkeleton type={part.type} /> : null;
+  }
   if (part.state !== "output-available" || !part.output.hasOrders) return null;
 
   switch (part.type) {
     case "tool-salesByDay":
       return (
         <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-          <LineChart data={part.output.result} title="Net sales on each day">
-            <XAxis dataKey="date" />
+          <LineChart data={part.output.result} margin={MARGIN} title="Net sales on each day">
+            <XAxis dataKey="date" tickFormatter={monthDay} />
             <YAxis />
-            <Tooltip />
+            {TOOLTIP}
             <Line type="monotone" dataKey="netSales" name="Net sales" stroke={BLUE} />
           </LineChart>
         </ResponsiveContainer>
@@ -34,10 +53,10 @@ export function MetricChart({ part }: { part: ToolUIPart<ChatTools> }) {
     case "tool-ordersByDay":
       return (
         <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-          <BarChart data={part.output.result} title="Orders on each day">
-            <XAxis dataKey="date" />
+          <BarChart data={part.output.result} margin={MARGIN} title="Orders on each day">
+            <XAxis dataKey="date" tickFormatter={monthDay} />
             <YAxis allowDecimals={false} />
-            <Tooltip />
+            {TOOLTIP}
             <Bar dataKey="orderCount" name="Orders" fill={BLUE} />
           </BarChart>
         </ResponsiveContainer>
@@ -49,11 +68,11 @@ export function MetricChart({ part }: { part: ToolUIPart<ChatTools> }) {
     case "tool-topProductsByRevenue":
       return (
         <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-          <BarChart data={part.output.result} layout="vertical" title="Revenue for each product">
+          <BarChart data={part.output.result} layout="vertical" margin={MARGIN} title="Revenue for each product">
             <XAxis type="number" />
             <YAxis type="category" dataKey="productTitle" width={TITLE_WIDTH} />
-            <Tooltip />
-            <Bar dataKey="revenue" name="Revenue" fill={BLUE} />
+            {TOOLTIP}
+            <Bar maxBarSize={BAR_SIZE} dataKey="revenue" name="Revenue" fill={BLUE} />
           </BarChart>
         </ResponsiveContainer>
       );
@@ -61,11 +80,11 @@ export function MetricChart({ part }: { part: ToolUIPart<ChatTools> }) {
     case "tool-returnsByProduct":
       return (
         <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-          <BarChart data={part.output.result} layout="vertical" title="Return rate for each product">
+          <BarChart data={part.output.result} layout="vertical" margin={MARGIN} title="Return rate for each product">
             <XAxis type="number" unit="%" />
             <YAxis type="category" dataKey="productTitle" width={TITLE_WIDTH} />
-            <Tooltip />
-            <Bar dataKey="returnRate" name="Return rate" unit="%" fill={AMBER} />
+            {TOOLTIP}
+            <Bar maxBarSize={BAR_SIZE} dataKey="returnRate" name="Return rate" unit="%" fill={AMBER} />
           </BarChart>
         </ResponsiveContainer>
       );
@@ -108,13 +127,13 @@ export function MetricChart({ part }: { part: ToolUIPart<ChatTools> }) {
     case "tool-repeatCustomersByChannel":
       return (
         <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-          <BarChart data={part.output.result.breakdowns.salesChannel} title="New and repeat orders for each channel">
+          <BarChart data={part.output.result.breakdowns.salesChannel} margin={MARGIN} title="New and repeat orders for each channel">
             <XAxis dataKey="salesChannel" />
             <YAxis allowDecimals={false} />
-            <Tooltip />
+            {TOOLTIP}
             <Legend />
-            <Bar dataKey="repeat.orderCount" name="Repeat orders" stackId="orders" fill={BLUE} />
-            <Bar dataKey="new.orderCount" name="New orders" stackId="orders" fill={AMBER} />
+            <Bar maxBarSize={BAR_SIZE * 2} dataKey="repeat.orderCount" name="Repeat orders" stackId="orders" fill={BLUE} />
+            <Bar maxBarSize={BAR_SIZE * 2} dataKey="new.orderCount" name="New orders" stackId="orders" fill={AMBER} />
           </BarChart>
         </ResponsiveContainer>
       );
